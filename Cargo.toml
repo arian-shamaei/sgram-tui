@@ -2,6 +2,9 @@
 name = "sgram-tui"
 version = "0.1.1"
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/arian-shamaei/sgram-tui"
+homepage = "https://github.com/arian-shamaei/sgram-tui"
 
 [features]
 default = ["mic"]
