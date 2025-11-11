@@ -8,10 +8,23 @@ Terminal spectrogram viewer with live feed from microphone or WAV file, with zoo
 ![Waterfall](saved/scope-tui_demo1.png)
 ![Horizontal](saved/scope-tui_demo2.png)
 
+Install
+-------
+- One-liner (binary install):
+  - `curl -fsSL https://raw.githubusercontent.com/arian-shamaei/sgram-tui/main/scripts/install.sh | bash`
+  - Optional: install a specific version (e.g., 0.1.1): `SGRAM_VERSION=0.1.1 bash <(curl -fsSL https://raw.githubusercontent.com/arian-shamaei/sgram-tui/main/scripts/install.sh)`
+  - macOS will prompt for microphone permission on first run when using `mic`.
+- Homebrew tap:
+  - `brew tap arian-shamaei/tap`
+  - `brew install sgram-tui`
+- Cargo (build from source):
+  - macOS: `cargo install --locked --path .`
+  - Linux: `sudo apt-get install -y pkg-config libasound2-dev && cargo install --locked --path .`
 
-Installation
--------------
-brew tap arian-shamaei/tap && brew install sgram-tui
+Homebrew Core status
+--------------------
+- A Homebrew/homebrew-core PR is open: https://github.com/Homebrew/homebrew-core/pull/254041
+- New formulas must meet Homebrew’s “notability” threshold to merge. While that builds organically, use the one-liner installer or the tap above for full mic support today.
 
 Why?
 --------
@@ -41,6 +54,13 @@ Build
 - Default build includes microphone support via `cpal`:
   - `cargo build --release`
 - If you want to skip microphone feature: `cargo build --no-default-features`
+
+Quick Start
+-----------
+- Live mic: `sgram-tui mic --fft 1024 --hop 256`
+- WAV file (realtime): `sgram-tui wav ./path.wav --realtime`
+- Dense view: add `--resolution high` (and optionally `--render half`)
+- Save snapshots: press `s` for PNG or `w` for CSV; use `S`/`W` to choose paths
 
 Run
 ---
@@ -91,6 +111,7 @@ Known Bugs
 ---------------
 - There are quite a few bugs, as a lot of this code is heavily generated.
 - I encourage a deep dive into this program and try to break it. I believe AI is a great coding **Assistant** when told what to do correctly.
+- If you find this useful, consider starring the repo to help it reach Homebrew’s notability threshold.
 
 
 Troubleshooting
