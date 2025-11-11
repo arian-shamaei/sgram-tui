@@ -10,7 +10,7 @@ Terminal spectrogram viewer with live feed from microphone or WAV file, with zoo
 
 Why?
 --------
-- GUI interfaces provide a visually more accurate image, so why use a TUI?
+- GUIs provide a visually more accurate image, so why use a TUI?
 - A lot of my audio workflows are on the terminal. I wanted a way to access a specogram without switching from my terminal to a GUI.
 - scope-tui does a good job displaying X and XY graphs, sgram-tui intends to extend this functionality by adding a specogram.
 - This is the equivalent of the $50 oscilloscope: it's a fun toy that gives you the ability to see a specogram inside of a terminal... neat!
