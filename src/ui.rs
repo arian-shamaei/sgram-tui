@@ -330,8 +330,8 @@ fn draw_overlay(f: &mut ratatui::Frame, area: Rect, app: &App, _mode: &UiMode) {
     }
     // Metadata panel (top-right)
     let panel_w = area.width.min(52);
-    let panel_h = 6u16;
-    let px = area.x + area.width.saturating_sub(panel_w) - 1;
+    let panel_h = 7u16;
+    let px = area.x + area.width.saturating_sub(panel_w);
     let py = area.y;
     let df = (app.settings.sample_rate as f32) / (app.settings.fft_size as f32);
     let rps = app.stats_rows_sec;
@@ -342,7 +342,8 @@ fn draw_overlay(f: &mut ratatui::Frame, area: Rect, app: &App, _mode: &UiMode) {
         Line::from(format!("fs: {} Hz | L/H/N: {}/{}/{}", app.settings.sample_rate, app.settings.window_len, app.settings.hop_size, app.settings.fft_size)),
         Line::from(format!("bins: {} | df: {:.1} Hz", app.settings.fft_size/2, df)),
         Line::from(format!("floor/ceil: {:.0}/{:.0} dB | zoom: {:.2}", app.db_floor, app.db_ceiling, app.zoom)),
-        Line::from(format!("throughput: {:.1} rows/s | RTF: {:.2}x | total: {:.2}s", rps, rtf, total_time)),
+        Line::from(format!("throughput: {:.1} rows/s | RTF: {:.2}x", rps, rtf)),
+        Line::from(format!("frames: vis {} | rows: {} | total: {:.2}s", app.buffer.len(), app.total_rows, total_time)),
         Line::from(format!("scale: {:?} | render: {:?}", app.freq_scale, app.render_mode)),
     ];
     let p = Paragraph::new(meta).block(Block::default().borders(Borders::ALL).title("details"));
