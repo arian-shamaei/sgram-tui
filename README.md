@@ -8,16 +8,21 @@ Terminal spectrogram viewer with live feed from microphone or WAV file, with zoo
 ![Waterfall](saved/scope-tui_demo1.png)
 ![Horizontal](saved/scope-tui_demo2.png)
 
+
+Installation
+-------------
+brew tap arian-shamaei/tap && brew install sgram-tui
+
 Why?
 --------
 - GUIs provide a visually more accurate image, so why use a TUI?
-- A lot of my audio workflows are on the terminal. I wanted a way to access a specogram without switching from my terminal to a GUI.
+- A lot of my audio workflows are on the terminal. I wanted a way to access a spectogram without switching from my terminal to a GUI.
 - scope-tui does a good job displaying X and XY graphs, sgram-tui intends to extend this functionality by adding a specogram.
-- This is the equivalent of the $50 oscilloscope: it's a fun toy that gives you the ability to see a specogram inside of a terminal... neat!
+- This is the equivalent of the $50 oscilloscope: it's a fun toy that gives you the ability to see a spectogram inside of a terminal... neat!
 
 What's with the name?
 --------
-- it's a specogram terminal user interface... I'm not sure if it gets simpler than that.
+- it's a spectogram terminal user interface... I'm not sure if it gets simpler than that.
 
 Features
 --------
@@ -70,11 +75,6 @@ Shows metadata and live processing throughput (rows/sec and real-time factor). I
 - Throughput (rows/sec) and RTF (~1.0 equals real-time)
 - Total processed time (H×rows / fs)
 
-Notes
------
-- WAV input is downmixed to mono and linearly resampled to target sample rate if needed.
-- PNG export re-renders the terminal buffer; dimensions are fixed (800x600) for now.
-- Replace demo assets in `saved/` (`demo.mp4`, screenshots) with your own captures.
 
 Configuration
 -------------
