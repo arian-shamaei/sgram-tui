@@ -83,6 +83,7 @@ pub struct App {
     pub stats_rows_sec: f32,
     pub stats_rows_count: usize,
     pub stats_last_instant: Instant,
+    pub total_rows: usize,
 }
 
 impl App {
@@ -160,6 +161,7 @@ impl App {
             stats_rows_sec: 0.0,
             stats_rows_count: 0,
             stats_last_instant: Instant::now(),
+            total_rows: 0,
         })
     }
 

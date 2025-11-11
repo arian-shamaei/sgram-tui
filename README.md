@@ -1,19 +1,26 @@
-Sgram TUI (sgram-tui)
-=====================
+Sgram TUI
+=========
 
 Terminal spectrogram viewer with live feed from microphone or WAV file, with zoom, palettes, animation modes, and export to PNG/CSV.
+
+Demo
+----
+- Video:
+  - <video src="saved/demo.mp4" controls width="640">Your browser does not support mp4 playback.</video>
+- Screenshots:
+  - ![Waterfall](saved/screenshot_waterfall.png)
+  - ![Horizontal](saved/screenshot_horizontal.png)
 
 Features
 --------
 - Live spectrogram from `mic` or a `.wav` file
-- Adjustable FFT size, hop, sample rate, dB floor, FPS
-- Zoom into low frequencies
-- Animation styles: horizontal (time→x, freq→y) and vertical waterfall (time→y, freq→x)
-- Color palettes: Grayscale, Heat, Jet, Viridis, Inferno, Magma, Plasma
-- Exports snapshot to PNG (`s` quick save / `S` path prompt), CSV (`w` / `W`)
-- Fullscreen mode, detailed overlay with frequency range
-- Keyboard controls and status overlay
-- Default save directory: `saved/` (auto-created); custom paths supported
+- Tunable analysis: window length (L), hop (H), FFT size (N), sample rate
+- Absolute dB display with floor/ceiling; responsive floor control
+- Zoom into low frequencies; linear/log/mel display scaling
+- Styles: horizontal (time→x, freq→y) and waterfall (time→y, freq→x); overview + fullscreen
+- Color palettes: Grayscale, Heat, Jet, Viridis, Inferno, Magma, Plasma, PurpleFire
+- Fast rendering; low-latency updates; optional real-time sync for WAV
+- Default save directory: `saved/` (auto-created); custom paths supported; PNG/CSV export
 
 Build
 -----
@@ -41,17 +48,25 @@ Controls
 - `[[/]]`: Adjust dB floor down/up
 - `c`/`C`: Next/previous palette
 - `f`: Fullscreen toggle
-- `o`: Overview (fit entire history into pane)
-- `d`: Details (frequency/time ticks + processing stats)
+- `o`: Overview (fit entire history vertically into pane)
+- `d`: Details (metadata + throughput; frequency ticks only)
 - `s`/`w`: Quick save PNG/CSV (to `saved/` by default)
 - `S`/`W`: Prompt for PNG/CSV path and save
 - `h`/`F1`: Help overlay (usage + keys)
+
+Details view
+------------
+Shows metadata and live processing throughput (rows/sec and real-time factor). Includes:
+- Source, fs, L/H/N, bin spacing (df)
+- dB floor/ceiling, zoom, scale, renderer
+- Throughput (rows/sec) and RTF (~1.0 equals real-time)
+- Total processed time (H×rows / fs)
 
 Notes
 -----
 - WAV input is downmixed to mono and linearly resampled to target sample rate if needed.
 - PNG export re-renders the terminal buffer; dimensions are fixed (800x600) for now.
-- The display normalizes each frame to its instantaneous max; for absolute calibration, extend DSP to track global max.
+- Replace demo assets in `saved/` (`demo.mp4`, screenshots) with your own captures.
 
 Configuration
 -------------

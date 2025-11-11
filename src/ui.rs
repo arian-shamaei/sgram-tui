@@ -50,6 +50,7 @@ pub fn run(app: &mut App) -> Result<()> {
                     app.push_row(row, bins);
                     drained += 1;
                     app.stats_rows_count += 1;
+                    app.total_rows = app.total_rows.saturating_add(1);
                     if drained > 1024 { break; }
                 }
                 let now = Instant::now();
@@ -316,7 +317,7 @@ fn draw_status(f: &mut ratatui::Frame, area: Rect, app: &App, mode: &UiMode) {
 }
 
 fn draw_overlay(f: &mut ratatui::Frame, area: Rect, app: &App, _mode: &UiMode) {
-    // Frequency markers with labels
+    // Frequency markers with labels (left side)
     let ticks = 4;
     for i in 0..=ticks {
         let y = area.y + (i as u16) * (area.height.saturating_sub(1)) / (ticks as u16);
@@ -327,17 +328,26 @@ fn draw_overlay(f: &mut ratatui::Frame, area: Rect, app: &App, _mode: &UiMode) {
         let r = Rect { x: area.x, y, width: label.len() as u16, height: 1 };
         f.render_widget(p, r);
     }
-    // Time labels along bottom
-    let t_ticks = 4;
-    let total_s = (app.buffer.len() as f32) * (app.settings.hop_size as f32) / (app.settings.sample_rate as f32);
-    for i in 0..=t_ticks {
-        let x = area.x + (i as u16) * (area.width.saturating_sub(1)) / (t_ticks as u16);
-        let t = (i as f32) / (t_ticks as f32) * total_s;
-        let label = format!("{:.1}s", t);
-        let p = Paragraph::new(label.clone());
-        let r = Rect { x, y: area.y + area.height.saturating_sub(1), width: label.len() as u16, height: 1 };
-        f.render_widget(p, r);
-    }
+    // Metadata panel (top-right)
+    let panel_w = area.width.min(52);
+    let panel_h = 6u16;
+    let px = area.x + area.width.saturating_sub(panel_w) - 1;
+    let py = area.y;
+    let df = (app.settings.sample_rate as f32) / (app.settings.fft_size as f32);
+    let rps = app.stats_rows_sec;
+    let rtf = rps * (app.settings.hop_size as f32) / (app.settings.sample_rate as f32);
+    let total_time = (app.total_rows as f32) * (app.settings.hop_size as f32) / (app.settings.sample_rate as f32);
+    let meta = vec![
+        Line::from(format!("src: {}", app.input_desc)),
+        Line::from(format!("fs: {} Hz | L/H/N: {}/{}/{}", app.settings.sample_rate, app.settings.window_len, app.settings.hop_size, app.settings.fft_size)),
+        Line::from(format!("bins: {} | df: {:.1} Hz", app.settings.fft_size/2, df)),
+        Line::from(format!("floor/ceil: {:.0}/{:.0} dB | zoom: {:.2}", app.db_floor, app.db_ceiling, app.zoom)),
+        Line::from(format!("throughput: {:.1} rows/s | RTF: {:.2}x | total: {:.2}s", rps, rtf, total_time)),
+        Line::from(format!("scale: {:?} | render: {:?}", app.freq_scale, app.render_mode)),
+    ];
+    let p = Paragraph::new(meta).block(Block::default().borders(Borders::ALL).title("details"));
+    let rect = Rect { x: px, y: py, width: panel_w, height: panel_h };
+    f.render_widget(p, rect);
 }
 
 fn sample_bin_x(x: usize, w: usize, bins: usize, app: &App) -> usize {
