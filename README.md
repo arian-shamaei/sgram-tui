@@ -3,10 +3,7 @@ Sgram TUI
 
 Terminal spectrogram viewer with live feed from microphone or WAV file, with zoom, palettes, animation modes, and export to PNG/CSV.
 
-<video controls width="720">
-  <source src="https://github.com/arian-shamaei/sgram-tui/releases/download/v0.1.0/scope-tui_demo.mp4" type="video/mp4">
-  <a href="https://youtu.be/AtW3dyPjL08">Watch the demo on YouTube</a>
-</video>
+[![Scope TUI Demo](https://img.youtube.com/vi/AtW3dyPjL08/0.jpg)](https://www.youtube.com/watch?v=AtW3dyPjL08 "Scope TUI Demo")
 
 ![Waterfall](saved/scope-tui_demo1.png)
 ![Horizontal](saved/scope-tui_demo2.png)
