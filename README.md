@@ -5,11 +5,11 @@ Terminal spectrogram viewer with live feed from microphone or WAV file, with zoo
 
 Demo
 ----
-- Video:
-  - <video src="saved/demo.mp4" controls width="640">Your browser does not support mp4 playback.</video>
+- Video (local file in repo):
+  - <video src="saved/scope-tui_demo.mp4" controls width="720">Your browser may not render inline video; download to play.</video>
 - Screenshots:
-  - ![Waterfall](saved/screenshot_waterfall.png)
-  - ![Horizontal](saved/screenshot_horizontal.png)
+  - ![Waterfall](saved/scope-tui_demo1.png)
+  - ![Horizontal](saved/scope-tui_demo2.png)
 
 Features
 --------
