@@ -10,9 +10,8 @@ Terminal spectrogram viewer with live feed from microphone or WAV file, with zoo
 
 Install
 -------
-- One-liner (binary install):
+- Binary install:
   - `curl -fsSL https://raw.githubusercontent.com/arian-shamaei/sgram-tui/main/scripts/install.sh | bash`
-  - Optional: install a specific version (e.g., 0.1.1): `SGRAM_VERSION=0.1.1 bash <(curl -fsSL https://raw.githubusercontent.com/arian-shamaei/sgram-tui/main/scripts/install.sh)`
   - macOS will prompt for microphone permission on first run when using `mic`.
 - Homebrew tap:
   - `brew tap arian-shamaei/tap`
@@ -21,16 +20,11 @@ Install
   - macOS: `cargo install --locked --path .`
   - Linux: `sudo apt-get install -y pkg-config libasound2-dev && cargo install --locked --path .`
 
-Homebrew Core status
---------------------
-- A Homebrew/homebrew-core PR is open: https://github.com/Homebrew/homebrew-core/pull/254041
-- New formulas must meet Homebrew’s “notability” threshold to merge. While that builds organically, use the one-liner installer or the tap above for full mic support today.
-
 Why?
 --------
 - GUIs provide a visually more accurate image, so why use a TUI?
 - A lot of my audio workflows are on the terminal. I wanted a way to access a spectogram without switching from my terminal to a GUI.
-- scope-tui does a good job displaying X and XY graphs, sgram-tui intends to extend this functionality by adding a specogram.
+- scope-tui does a good job displaying X and XY graphs, sgram-tui intends to extend this functionality by adding a spectogram.
 - This is the equivalent of the $50 oscilloscope: it's a fun toy that gives you the ability to see a spectogram inside of a terminal... neat!
 
 What's with the name?
