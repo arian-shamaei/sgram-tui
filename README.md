@@ -5,8 +5,8 @@ Terminal spectrogram viewer with live feed from microphone or WAV file, with zoo
 
 [![Scope TUI Demo](https://img.youtube.com/vi/AtW3dyPjL08/0.jpg)](https://www.youtube.com/watch?v=AtW3dyPjL08 "Scope TUI Demo")
 
-![Waterfall](saved/scope-tui_demo1.png)
-![Horizontal](saved/scope-tui_demo2.png)
+![Blue!](saved/sgram-tui_demo1.png)
+![Classic](saved/scope-tui_demo2.png)
 
 Install
 -------
