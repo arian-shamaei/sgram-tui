@@ -65,6 +65,48 @@ impl Palette {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rgb_of(color: Color) -> (u8, u8, u8) { match color { Color::Rgb(r,g,b) => (r,g,b), _ => (0,0,0) } }
+
+    #[test]
+    fn color_at_clamps_bounds() {
+        let p = Palette::grayscale();
+        let (r0, g0, b0) = rgb_of(p.color_at(-1.0));
+        let (r1, g1, b1) = rgb_of(p.color_at(2.0));
+        assert!(r0 <= 255 && g0 <= 255 && b0 <= 255);
+        assert!(r1 <= 255 && g1 <= 255 && b1 <= 255);
+    }
+
+    #[test]
+    fn cycle_next_and_prev_returns_to_start() {
+        let start = Palette::grayscale();
+        let base = rgb_of(start.color_at(0.37));
+
+        // Find cycle length for next()
+        let mut p = start;
+        let mut period_next = None;
+        for i in 1..=16 {
+            p = p.next();
+            if rgb_of(p.color_at(0.37)) == base { period_next = Some(i); break; }
+        }
+        let per_n = period_next.expect("no cycle found for next()");
+        assert!(per_n <= 8, "unexpected next() cycle length: {}", per_n);
+
+        // Find cycle length for prev()
+        let mut p2 = start;
+        let mut period_prev = None;
+        for i in 1..=16 {
+            p2 = p2.prev();
+            if rgb_of(p2.color_at(0.37)) == base { period_prev = Some(i); break; }
+        }
+        let per_p = period_prev.expect("no cycle found for prev()");
+        assert!(per_p <= 8, "unexpected prev() cycle length: {}", per_p);
+    }
+}
+
 fn viridis_rgb(t: f32) -> (u8, u8, u8) {
     // Lightweight approximation to viridis using piecewise polynomials
     let t = t.clamp(0.0, 1.0);

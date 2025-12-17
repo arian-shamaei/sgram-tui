@@ -1,7 +1,7 @@
 Sgram TUI
 =========
 
-Terminal spectrogram viewer with live feed from microphone or WAV file, with zoom, palettes, animation modes, and export to PNG/CSV.
+Fast terminal spectrogram viewer with mic/WAV input, style-aware PNG export, and tunable DSP.
 
 [![Scope TUI Demo](https://img.youtube.com/vi/AtW3dyPjL08/0.jpg)](https://www.youtube.com/watch?v=AtW3dyPjL08 "Scope TUI Demo")
 
@@ -10,16 +10,11 @@ Terminal spectrogram viewer with live feed from microphone or WAV file, with zoo
 
 Install
 -------
-- One-liner (binary install):
-  - `curl -fsSL https://raw.githubusercontent.com/arian-shamaei/sgram-tui/main/scripts/install.sh | bash`
-  - Optional: install a specific version (e.g., 0.1.1): `SGRAM_VERSION=0.1.1 bash <(curl -fsSL https://raw.githubusercontent.com/arian-shamaei/sgram-tui/main/scripts/install.sh)`
-  - macOS will prompt for microphone permission on first run when using `mic`.
-- Homebrew tap:
-  - `brew tap arian-shamaei/tap`
-  - `brew install sgram-tui`
-- Cargo (build from source):
-  - macOS: `cargo install --locked --path .`
-  - Linux: `sudo apt-get install -y pkg-config libasound2-dev && cargo install --locked --path .`
+- Cargo (recommended)
+  - `cargo install --locked --path .`
+- From source
+  - `cargo build --release && ./target/release/sgram-tui --help`
+  - Linux mic deps: `sudo apt-get install -y pkg-config libasound2-dev`
 
 Homebrew Core status
 --------------------
@@ -39,14 +34,14 @@ What's with the name?
 
 Features
 --------
-- Live spectrogram from `mic` or a `.wav` file
+- Live spectrogram from `mic` or `.wav`
 - Tunable analysis: window length (L), hop (H), FFT size (N), sample rate
-- Absolute dB display with floor/ceiling; responsive floor control
-- Zoom into low frequencies; linear/log/mel display scaling
+- Absolute dB with floor/ceiling; fast floor control
+- Zoom; frequency scales: linear, log, mel
 - Styles: horizontal (time→x, freq→y) and waterfall (time→y, freq→x); overview + fullscreen
-- Color palettes: Grayscale, Heat, Jet, Viridis, Inferno, Magma, Plasma, PurpleFire
-- Fast rendering; low-latency updates; optional real-time sync for WAV
-- Default save directory: `saved/` (auto-created); custom paths supported; PNG/CSV export
+- Palettes: Grayscale, Heat, Jet, Viridis, Inferno, Magma, Plasma, PurpleFire
+- Fast rendering; real-time sync option for WAV
+- Exports: PNG (matches current style/scale/zoom) and CSV; default dir: `saved/`
 
 Build
 -----
@@ -57,10 +52,11 @@ Build
 
 Quick Start
 -----------
-- Live mic: `sgram-tui mic --fft 1024 --hop 256`
-- WAV file (realtime): `sgram-tui wav ./path.wav --realtime`
+- Live mic (macOS BlackHole example):
+  - `./target/release/sgram-tui mic --device "BlackHole 2ch" --fps 15 --pre-emphasis 0.97 --normalize`
+- WAV file (realtime): `./target/release/sgram-tui wav ./path.wav --realtime --pre-emphasis 0.97 --normalize`
 - Dense view: add `--resolution high` (and optionally `--render half`)
-- Save snapshots: press `s` for PNG or `w` for CSV; use `S`/`W` to choose paths
+- Save snapshots: press `s` (PNG) or `w` (CSV); `S`/`W` prompts for a path
 
 Run
 ---
@@ -98,7 +94,7 @@ Shows metadata and live processing throughput (rows/sec and real-time factor). I
 
 Configuration
 -------------
-- Default config path: `${CONFIG_DIR}/sgram-tui/config.toml` (macOS: `~/Library/Application Support/sgram-tui/config.toml`, Linux: `~/.config/sgram-tui/config.toml`)
+- Default config path: `${CONFIG_DIR}/io.github/arian-shamaei/sgram-tui/config.toml`
 - Example `config.toml`:
 
   detailed = true
@@ -106,13 +102,6 @@ Configuration
   device = "USB Audio"   # substring match for mic device
   png_path = "./out.png" # default for quick save
   csv_path = "./out.csv"
-
-Known Bugs
----------------
-- There are quite a few bugs, as a lot of this code is heavily generated.
-- I encourage a deep dive into this program and try to break it. I believe AI is a great coding **Assistant** when told what to do correctly.
-- If you find this useful, consider starring the repo to help it reach Homebrew’s notability threshold.
-
 
 Troubleshooting
 ---------------

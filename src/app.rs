@@ -53,6 +53,8 @@ pub struct Settings {
     pub pre_emphasis: Option<f32>,
     pub overview: bool,
     pub realtime: bool,
+    pub clamp_floor: bool,
+    pub normalize: bool,
 }
 
 pub struct App {
@@ -124,6 +126,8 @@ impl App {
                 .sample_rate(sr)
                 .alpha(alpha)
                 .pre_emphasis(pre_emph)
+                .clamp_floor(settings.clamp_floor)
+                .normalize(settings.normalize)
                 .build();
             if let Err(e) = input::run_input_pipeline(thread_kind, sr, settings.realtime, move |samples| {
                 let rows = spec.process_samples(samples);
@@ -194,7 +198,21 @@ impl App {
     pub fn toggle_help(&mut self) { self.show_help = !self.show_help; }
 
     pub fn save_png(&self, path: PathBuf, width: u32, height: u32) -> Result<()> {
-        export::save_png(&self.buffer, &self.palette, self.db_floor, self.db_ceiling, width, height, path)
+        export::save_png(
+            &self.buffer,
+            &self.palette,
+            self.db_floor,
+            self.db_ceiling,
+            width,
+            height,
+            self.style,
+            self.render_mode,
+            self.freq_scale,
+            self.settings.sample_rate,
+            self.zoom,
+            self.overview,
+            path,
+        )
     }
 
     pub fn save_csv(&self, path: PathBuf) -> Result<()> { export::save_csv(&self.buffer, path) }

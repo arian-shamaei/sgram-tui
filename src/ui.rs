@@ -232,8 +232,8 @@ fn draw_waterfall(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
                     let bot_idx = (y * 2 + 1).min(total.saturating_sub(1));
                     (&app.buffer[top_idx], &app.buffer[bot_idx])
                 };
-                let row_max_top = top.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
-                let row_max_bot = bot.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+                let row_max_top = app.db_ceiling;
+                let row_max_bot = app.db_ceiling;
                 let mut spans = Vec::with_capacity(w);
                 for x in 0..w {
                     let idx = sample_bin_x(x, w, bins, app);
@@ -365,7 +365,6 @@ fn sample_bin_y(y: usize, h: usize, bins: usize, app: &App) -> usize {
 fn map_t_to_bin(t: f32, bins: usize, app: &App) -> usize {
     let fs = app.settings.sample_rate as f32;
     let fmax = fs / 2.0 / app.zoom.max(1.0);
-    let fmin = match app.freq_scale { FreqScale::Linear => 0.0, _ => 20.0 };
     let f = map_frac_to_freq(t, app);
     let hz_per_bin = fmax / (bins as f32);
     let idx = if hz_per_bin > 0.0 { (f / hz_per_bin).floor() as usize } else { 0 };
