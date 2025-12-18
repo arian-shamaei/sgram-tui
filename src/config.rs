@@ -13,7 +13,8 @@ pub struct FileConfig {
 }
 
 pub fn config_dir() -> Option<PathBuf> {
-    ProjectDirs::from("io", "sgram", "sgram-tui").map(|p| p.config_dir().to_path_buf())
+    // Updated identifiers: qualifier, organization, application
+    ProjectDirs::from("io.github", "arian-shamaei", "sgram-tui").map(|p| p.config_dir().to_path_buf())
 }
 
 pub fn load_config() -> Option<FileConfig> {

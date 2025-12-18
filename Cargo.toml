@@ -1,10 +1,15 @@
 [package]
 name = "sgram-tui"
-version = "0.1.1"
+version = "0.2.1"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/arian-shamaei/sgram-tui"
 homepage = "https://github.com/arian-shamaei/sgram-tui"
+description = "Fast terminal spectrogram viewer with mic/WAV input, style-aware export, and tunable DSP."
+readme = "README.md"
+keywords = ["audio", "spectrogram", "tui", "fft", "terminal"]
+categories = ["command-line-utilities", "multimedia::audio", "visualization"]
+documentation = "https://github.com/arian-shamaei/sgram-tui"
 
 [features]
 default = ["mic"]

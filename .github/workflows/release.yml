@@ -8,6 +8,10 @@ on:
     types: [published]
   workflow_dispatch:
 
+# Needed to create GitHub Releases from GITHUB_TOKEN
+permissions:
+  contents: write
+
 jobs:
   build:
     name: build-${{ matrix.name }}
@@ -18,7 +22,9 @@ jobs:
         include:
           - { name: linux-amd64, os: ubuntu-latest, plat: linux, arch: amd64 }
           - { name: darwin-arm64, os: macos-latest, plat: darwin, arch: arm64 }
-          - { name: darwin-amd64, os: macos-13, plat: darwin, arch: amd64 }
+          # macOS 13 runners are retired; use macOS 15 images instead.
+          # macos-15-intel runs macOS 15 on Intel hardware (x86_64).
+          - { name: darwin-amd64, os: macos-15-intel, plat: darwin, arch: amd64 }
 
     steps:
       - name: Checkout
@@ -64,6 +70,8 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
+          pattern: sgram-tui-*
+          merge-multiple: true
           path: dist
 
       - name: Create GitHub Release

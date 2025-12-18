@@ -121,6 +121,14 @@ struct Cli {
     #[arg(long, default_value_t = false)]
     realtime: bool,
 
+    /// Clamp DSP output to dB floor before rendering
+    #[arg(long, default_value_t = false)]
+    clamp_floor: bool,
+
+    /// Normalize each DSP frame to its max (peak=0 dB)
+    #[arg(long, default_value_t = false)]
+    normalize: bool,
+
     /// Disable microphone feature fallback check
     #[arg(long, action=ArgAction::SetTrue)]
     no_mic: bool,
@@ -183,6 +191,8 @@ fn main() -> Result<()> {
         pre_emphasis: cli.pre_emphasis,
         overview: cli.overview,
         realtime: cli.realtime,
+        clamp_floor: cli.clamp_floor,
+        normalize: cli.normalize,
     };
 
     // Apply resolution preset as a convenience when using defaults
