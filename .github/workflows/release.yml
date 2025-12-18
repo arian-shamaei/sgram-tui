@@ -8,6 +8,10 @@ on:
     types: [published]
   workflow_dispatch:
 
+# Needed to create GitHub Releases from GITHUB_TOKEN
+permissions:
+  contents: write
+
 jobs:
   build:
     name: build-${{ matrix.name }}
