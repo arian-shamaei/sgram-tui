@@ -2,6 +2,12 @@ Changelog
 
 All notable changes to this project will be documented in this file.
 
+0.2.1 – CI and release fixes
+- Update GitHub Actions to use `macos-15-intel` for Intel macOS builds (macOS 13 runners retired).
+- Fix Linux CI by installing `pkg-config` and `libasound2-dev` for `alsa-sys`.
+- Improve release workflow artifact download to collect all target builds.
+- Minor code formatting tidy-ups; no functional changes.
+
 0.2.0 – Improved DSP, exports, and mic stability
 - PNG export honors the selected style (waterfall or horizontal), frequency scale (linear/log/mel), and zoom; maps full history cleanly.
 - Added DSP options:

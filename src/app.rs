@@ -9,7 +9,16 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 #[derive(Copy, Clone, Debug)]
-pub enum ColorPalette { Grayscale, Heat, Viridis, Jet, Inferno, Magma, Plasma, PurpleFire }
+pub enum ColorPalette {
+    Grayscale,
+    Heat,
+    Viridis,
+    Jet,
+    Inferno,
+    Magma,
+    Plasma,
+    PurpleFire,
+}
 
 impl ColorPalette {
     pub fn palette(&self) -> Palette {
@@ -27,10 +36,17 @@ impl ColorPalette {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub enum AnimationStyle { Horizontal, Waterfall }
+pub enum AnimationStyle {
+    Horizontal,
+    Waterfall,
+}
 
 #[derive(Copy, Clone, Debug)]
-pub enum FreqScale { Linear, Log, Mel }
+pub enum FreqScale {
+    Linear,
+    Log,
+    Mel,
+}
 
 #[derive(Copy, Clone, Debug)]
 pub struct Settings {
@@ -89,7 +105,12 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(input: String, settings: Settings, no_mic: bool, mic_device: Option<String>) -> Result<Self> {
+    pub fn new(
+        input: String,
+        settings: Settings,
+        no_mic: bool,
+        mic_device: Option<String>,
+    ) -> Result<Self> {
         let input_kind = if input.to_lowercase() == "mic" {
             if cfg!(feature = "mic") && !no_mic {
                 AudioInputKind::Mic { device: mic_device }
@@ -129,10 +150,14 @@ impl App {
                 .clamp_floor(settings.clamp_floor)
                 .normalize(settings.normalize)
                 .build();
-            if let Err(e) = input::run_input_pipeline(thread_kind, sr, settings.realtime, move |samples| {
-                let rows = spec.process_samples(samples);
-                for row in rows { let _ = spectrogram_tx.send(row); }
-            }) {
+            if let Err(e) =
+                input::run_input_pipeline(thread_kind, sr, settings.realtime, move |samples| {
+                    let rows = spec.process_samples(samples);
+                    for row in rows {
+                        let _ = spectrogram_tx.send(row);
+                    }
+                })
+            {
                 eprintln!("Input pipeline error: {e}");
             }
         });
@@ -169,33 +194,54 @@ impl App {
         })
     }
 
-    pub fn tick_rate(&self) -> Duration { Duration::from_millis((1000 / self.settings.fps.max(1)) as u64) }
+    pub fn tick_rate(&self) -> Duration {
+        Duration::from_millis((1000 / self.settings.fps.max(1)) as u64)
+    }
 
     pub fn push_row(&mut self, mut row: Vec<f32>, bins: usize) {
         // Apply zoom: take lower frequency bins proportionally (in dB domain)
         let take = ((bins as f32) / self.zoom).round() as usize;
         row.truncate(take.max(1));
         self.buffer.push_front(row);
-        while self.buffer.len() > self.max_history { self.buffer.pop_back(); }
+        while self.buffer.len() > self.max_history {
+            self.buffer.pop_back();
+        }
     }
 
-    pub fn clear(&mut self) { self.buffer.clear(); }
+    pub fn clear(&mut self) {
+        self.buffer.clear();
+    }
 
-    pub fn toggle_pause(&mut self) { self.paused = !self.paused; }
+    pub fn toggle_pause(&mut self) {
+        self.paused = !self.paused;
+    }
 
     pub fn toggle_style(&mut self) {
-        self.style = match self.style { AnimationStyle::Horizontal => AnimationStyle::Waterfall, AnimationStyle::Waterfall => AnimationStyle::Horizontal };
+        self.style = match self.style {
+            AnimationStyle::Horizontal => AnimationStyle::Waterfall,
+            AnimationStyle::Waterfall => AnimationStyle::Horizontal,
+        };
     }
 
-    pub fn next_palette(&mut self) { self.palette = self.palette.next(); }
+    pub fn next_palette(&mut self) {
+        self.palette = self.palette.next();
+    }
 
-    pub fn prev_palette(&mut self) { self.palette = self.palette.prev(); }
+    pub fn prev_palette(&mut self) {
+        self.palette = self.palette.prev();
+    }
 
-    pub fn adjust_zoom(&mut self, delta: f32) { self.zoom = (self.zoom + delta).clamp(1.0, 64.0); }
+    pub fn adjust_zoom(&mut self, delta: f32) {
+        self.zoom = (self.zoom + delta).clamp(1.0, 64.0);
+    }
 
-    pub fn adjust_floor(&mut self, delta: f32) { self.db_floor = (self.db_floor + delta).clamp(-140.0, -10.0); }
+    pub fn adjust_floor(&mut self, delta: f32) {
+        self.db_floor = (self.db_floor + delta).clamp(-140.0, -10.0);
+    }
 
-    pub fn toggle_help(&mut self) { self.show_help = !self.show_help; }
+    pub fn toggle_help(&mut self) {
+        self.show_help = !self.show_help;
+    }
 
     pub fn save_png(&self, path: PathBuf, width: u32, height: u32) -> Result<()> {
         export::save_png(
@@ -215,8 +261,13 @@ impl App {
         )
     }
 
-    pub fn save_csv(&self, path: PathBuf) -> Result<()> { export::save_csv(&self.buffer, path) }
+    pub fn save_csv(&self, path: PathBuf) -> Result<()> {
+        export::save_csv(&self.buffer, path)
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
-pub enum RenderMode { Cell, Half }
+pub enum RenderMode {
+    Cell,
+    Half,
+}
