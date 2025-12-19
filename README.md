@@ -1,7 +1,7 @@
-Sgram TUI
+[Sgram TUI](https://s2.smu.edu/~ashamaei/projects/sgram-tui.html)
 =========
 
-Fast terminal spectrogram viewer with mic/WAV input, style-aware PNG export, and tunable DSP.
+Terminal spectrogram viewer with mic/WAV input, style-aware PNG export, and tunable DSP.
 
 [![Scope TUI Demo](https://img.youtube.com/vi/AtW3dyPjL08/0.jpg)](https://www.youtube.com/watch?v=AtW3dyPjL08 "Scope TUI Demo")
 
@@ -15,11 +15,6 @@ Install
 - From source
   - `cargo build --release && ./target/release/sgram-tui --help`
   - Linux mic deps: `sudo apt-get install -y pkg-config libasound2-dev`
-
-Homebrew Core status
---------------------
-- A Homebrew/homebrew-core PR is open: https://github.com/Homebrew/homebrew-core/pull/254041
-- New formulas must meet Homebrew’s “notability” threshold to merge. While that builds organically, use the one-liner installer or the tap above for full mic support today.
 
 Why?
 --------
