@@ -6,7 +6,7 @@ Terminal spectrogram viewer with mic/WAV input, style-aware PNG export, and tuna
 [![Scope TUI Demo](https://img.youtube.com/vi/AtW3dyPjL08/0.jpg)](https://www.youtube.com/watch?v=AtW3dyPjL08 "Scope TUI Demo")
 
 
-![Horizontal](saved/scope-tui_demo2.png)
+
 
 Install
 -------
