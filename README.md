@@ -10,11 +10,9 @@ Terminal spectrogram viewer with mic/WAV input, style-aware PNG export, and tuna
 
 Install
 -------
-- Cargo (recommended)
-  - `cargo install --locked --path .`
 - From source
   - `cargo build --release && ./target/release/sgram-tui --help`
-  - Linux mic deps: `sudo apt-get install -y pkg-config libasound2-dev`
+  - Additional if running on Linux: `sudo apt-get install -y pkg-config libasound2-dev`
 
 Why?
 --------
