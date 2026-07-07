@@ -35,10 +35,11 @@ impl ColorPalette {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum AnimationStyle {
     Horizontal,
     Waterfall,
+    Spectrum,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -46,6 +47,12 @@ pub enum FreqScale {
     Linear,
     Log,
     Mel,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum BinsMode {
+    All,
+    Peaks,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -71,13 +78,14 @@ pub struct Settings {
     pub realtime: bool,
     pub clamp_floor: bool,
     pub normalize: bool,
+    pub window: WindowType,
+    pub bins_mode: BinsMode,
 }
 
 pub struct App {
     pub settings: Settings,
     pub running: bool,
     pub paused: bool,
-    pub last_tick: Instant,
     pub palette: Palette,
     pub style: AnimationStyle,
     pub zoom: f32,
@@ -86,14 +94,12 @@ pub struct App {
     pub buffer: VecDeque<Vec<f32>>, // normalized 0..1 rows (bins)
     pub max_history: usize,
     pub spectrogram_rx: Receiver<Vec<f32>>,
-    pub input_kind: AudioInputKind,
     pub input_desc: String,
     pub detailed: bool,
     pub fullscreen: bool,
     pub export_png_path: Option<PathBuf>,
     pub export_csv_path: Option<PathBuf>,
     pub render_mode: RenderMode,
-    pub history: usize,
     pub show_help: bool,
     pub freq_scale: FreqScale,
     pub overview: bool,
@@ -102,6 +108,13 @@ pub struct App {
     pub stats_rows_count: usize,
     pub stats_last_instant: Instant,
     pub total_rows: usize,
+    pub status_msg: Option<(String, Instant)>,
+    pub bins_mode: BinsMode,
+    pub hover: Option<(u16, u16)>,
+    pub hover_at: Instant,
+    pub pipeline_error: std::sync::Arc<std::sync::Mutex<Option<String>>>,
+    /// Sticky input error shown in the status bar (unlike status_msg, no expiry)
+    pub error: Option<String>,
 }
 
 impl App {
@@ -111,6 +124,14 @@ impl App {
         no_mic: bool,
         mic_device: Option<String>,
     ) -> Result<Self> {
+        // Normalize analysis parameters once so every consumer (DSP, status
+        // bar, hover readout, PNG time axis, render summaries) agrees on the
+        // effective values, not the raw CLI ones.
+        let mut settings = settings;
+        settings.fft_size = settings.fft_size.max(16);
+        settings.window_len = settings.window_len.min(settings.fft_size).max(16);
+        settings.hop_size = settings.hop_size.min(settings.window_len).max(1);
+
         let input_kind = if input.to_lowercase() == "mic" {
             if cfg!(feature = "mic") && !no_mic {
                 AudioInputKind::Mic { device: mic_device }
@@ -126,8 +147,8 @@ impl App {
         // Start input + DSP thread
         let sr = settings.sample_rate;
         let fft_size = settings.fft_size;
-        let frame_len = settings.window_len.min(fft_size).max(16);
-        let hop = settings.hop_size.min(frame_len).max(1);
+        let frame_len = settings.window_len;
+        let hop = settings.hop_size;
         let floor = settings.db_floor;
         let alpha = settings.alpha;
         let pre_emph = settings.pre_emphasis;
@@ -139,12 +160,13 @@ impl App {
             AudioInputKind::Wav(p) => format!("WAV: {}", p.display()),
         };
 
+        let pipeline_error = std::sync::Arc::new(std::sync::Mutex::new(None::<String>));
+        let thread_error = pipeline_error.clone();
         let thread_kind = input_kind.clone();
         std::thread::spawn(move || {
             let mut spec = SpectrogramBuilder::new(fft_size, frame_len, hop)
-                .window(WindowType::Hann)
+                .window(settings.window)
                 .db_floor(floor)
-                .sample_rate(sr)
                 .alpha(alpha)
                 .pre_emphasis(pre_emph)
                 .clamp_floor(settings.clamp_floor)
@@ -158,7 +180,9 @@ impl App {
                     }
                 })
             {
-                eprintln!("Input pipeline error: {e}");
+                // Surfaced by the UI (or the headless render path); eprintln
+                // alone would be swallowed by the alternate screen.
+                *thread_error.lock().unwrap() = Some(e.to_string());
             }
         });
 
@@ -166,7 +190,6 @@ impl App {
             settings,
             running: true,
             paused: false,
-            last_tick: Instant::now(),
             palette: settings.palette.palette(),
             style: settings.style,
             zoom: settings.zoom,
@@ -175,14 +198,12 @@ impl App {
             buffer: VecDeque::new(),
             max_history: settings.history.max(16),
             spectrogram_rx,
-            input_kind,
             input_desc,
             detailed: settings.detailed,
             fullscreen: settings.fullscreen,
             export_png_path: None,
             export_csv_path: None,
             render_mode: settings.render_mode,
-            history: settings.history.max(16),
             show_help: false,
             freq_scale: settings.freq_scale,
             overview: settings.overview,
@@ -191,17 +212,22 @@ impl App {
             stats_rows_count: 0,
             stats_last_instant: Instant::now(),
             total_rows: 0,
+            status_msg: None,
+            bins_mode: settings.bins_mode,
+            hover: None,
+            hover_at: Instant::now(),
+            pipeline_error,
+            error: None,
         })
     }
 
     pub fn tick_rate(&self) -> Duration {
-        Duration::from_millis((1000 / self.settings.fps.max(1)) as u64)
+        Duration::from_millis(1000 / self.settings.fps.max(1))
     }
 
-    pub fn push_row(&mut self, mut row: Vec<f32>, bins: usize) {
-        // Apply zoom: take lower frequency bins proportionally (in dB domain)
-        let take = ((bins as f32) / self.zoom).round() as usize;
-        row.truncate(take.max(1));
+    pub fn push_row(&mut self, row: Vec<f32>) {
+        // Store full-resolution rows; zoom is applied at render time so it is
+        // reversible and history stays uniform when zoom changes mid-run.
         self.buffer.push_front(row);
         while self.buffer.len() > self.max_history {
             self.buffer.pop_back();
@@ -219,7 +245,15 @@ impl App {
     pub fn toggle_style(&mut self) {
         self.style = match self.style {
             AnimationStyle::Horizontal => AnimationStyle::Waterfall,
-            AnimationStyle::Waterfall => AnimationStyle::Horizontal,
+            AnimationStyle::Waterfall => AnimationStyle::Spectrum,
+            AnimationStyle::Spectrum => AnimationStyle::Horizontal,
+        };
+    }
+
+    pub fn toggle_bins_mode(&mut self) {
+        self.bins_mode = match self.bins_mode {
+            BinsMode::All => BinsMode::Peaks,
+            BinsMode::Peaks => BinsMode::All,
         };
     }
 
@@ -243,20 +277,68 @@ impl App {
         self.show_help = !self.show_help;
     }
 
+    /// Hover position, if the mouse moved recently (readouts fade after 3s).
+    pub fn active_hover(&self) -> Option<(u16, u16)> {
+        if self.hover_at.elapsed() < Duration::from_secs(3) {
+            self.hover
+        } else {
+            None
+        }
+    }
+
+    pub fn set_status(&mut self, msg: impl Into<String>) {
+        self.status_msg = Some((msg.into(), Instant::now()));
+    }
+
+    pub fn current_status(&self) -> Option<&str> {
+        match &self.status_msg {
+            Some((msg, at)) if at.elapsed() < Duration::from_secs(4) => Some(msg.as_str()),
+            _ => None,
+        }
+    }
+
+    /// Native export size: one pixel per (zoomed) frequency bin and history
+    /// row, doubled for crispness. The exporter adds axis margins on top.
+    pub fn png_content_dims(&self) -> (u32, u32) {
+        const MAX_DIM: u32 = 4096;
+        const MIN_DIM: u32 = 480;
+        let full_bins = self.buffer.front().map(|r| r.len()).unwrap_or(1).max(1) as f32;
+        let bins = ((full_bins / self.zoom.max(1.0)).round().max(1.0) as u32) * 2;
+        let rows = (self.buffer.len().max(1) as u32) * 2;
+        let (w, h) = match self.export_style() {
+            AnimationStyle::Horizontal => (rows, bins),
+            _ => (bins, rows),
+        };
+        (w.clamp(MIN_DIM, MAX_DIM), h.clamp(MIN_DIM, MAX_DIM))
+    }
+
+    /// Spectrum view has no 2D export; fall back to waterfall.
+    fn export_style(&self) -> AnimationStyle {
+        if self.style == AnimationStyle::Spectrum { AnimationStyle::Waterfall } else { self.style }
+    }
+
     pub fn save_png(&self, path: PathBuf, width: u32, height: u32) -> Result<()> {
+        let s = &self.settings;
         export::save_png(
-            &self.buffer,
-            &self.palette,
-            self.db_floor,
-            self.db_ceiling,
-            width,
-            height,
-            self.style,
-            self.render_mode,
-            self.freq_scale,
-            self.settings.sample_rate,
-            self.zoom,
-            self.overview,
+            &export::PngRequest {
+                buffer: &self.buffer,
+                palette: &self.palette,
+                db_floor: self.db_floor,
+                db_ceiling: self.db_ceiling,
+                width,
+                height,
+                style: self.export_style(),
+                freq_scale: self.freq_scale,
+                sample_rate: s.sample_rate,
+                zoom: self.zoom,
+                bins_mode: self.bins_mode,
+                hop: s.hop_size,
+                title: Some(format!(
+                    "fs={}Hz N={} L={} H={} floor={} ceil={}",
+                    s.sample_rate, s.fft_size, s.window_len, s.hop_size,
+                    self.db_floor as i32, self.db_ceiling as i32
+                )),
+            },
             path,
         )
     }
@@ -266,8 +348,12 @@ impl App {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RenderMode {
+    /// One colored block per terminal cell (1x1)
     Cell,
+    /// Two vertical sub-pixels per cell via '▀' (1x2)
     Half,
+    /// Four sub-pixels per cell via quadrant glyphs (2x2)
+    Quad,
 }

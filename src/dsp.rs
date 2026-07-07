@@ -1,5 +1,6 @@
 use rustfft::{num_complex::Complex32, FftPlanner};
 
+#[derive(Clone, Copy, Debug)]
 pub enum WindowType { Hann, Hamming, Blackman }
 
 pub struct Spectrogram {
@@ -7,8 +8,8 @@ pub struct Spectrogram {
     frame_len: usize,
     hop: usize,
     db_floor: f32,
-    sample_rate: u32,
     window: Vec<f32>,
+    mag_scale: f32,
     tmp: Vec<Complex32>,
     fft: std::sync::Arc<dyn rustfft::Fft<f32>>,
     overlap_buf: Vec<f32>,
@@ -24,7 +25,6 @@ pub struct SpectrogramBuilder {
     frame_len: usize,
     hop: usize,
     db_floor: f32,
-    sample_rate: u32,
     window: WindowType,
     alpha: u8,
     pre_emph: Option<f32>,
@@ -34,10 +34,9 @@ pub struct SpectrogramBuilder {
 
 impl SpectrogramBuilder {
     pub fn new(fft_size: usize, frame_len: usize, hop: usize) -> Self {
-        Self { fft_size, frame_len, hop, db_floor: -80.0, sample_rate: 48000, window: WindowType::Hann, alpha: 1, pre_emph: None, clamp_floor: false, normalize: false }
+        Self { fft_size, frame_len, hop, db_floor: -80.0, window: WindowType::Hann, alpha: 1, pre_emph: None, clamp_floor: false, normalize: false }
     }
     pub fn db_floor(mut self, f: f32) -> Self { self.db_floor = f; self }
-    pub fn sample_rate(mut self, sr: u32) -> Self { self.sample_rate = sr; self }
     pub fn window(mut self, w: WindowType) -> Self { self.window = w; self }
     pub fn alpha(mut self, a: u8) -> Self { self.alpha = if a == 2 { 2 } else { 1 }; self }
     pub fn pre_emphasis(mut self, beta: Option<f32>) -> Self { self.pre_emph = beta; self }
@@ -51,13 +50,17 @@ impl SpectrogramBuilder {
             WindowType::Hamming => hamming(self.frame_len),
             WindowType::Blackman => blackman(self.frame_len),
         };
+        // Calibrate so a full-scale sine reads ~0 dBFS regardless of window/FFT size:
+        // the peak bin of a windowed sine has magnitude A * sum(w) / 2.
+        let win_sum: f32 = window.iter().sum();
+        let mag_scale = 2.0 / win_sum.max(f32::EPSILON);
         Spectrogram {
             fft_size: self.fft_size,
             frame_len: self.frame_len,
             hop: self.hop.min(self.frame_len).max(1),
             db_floor: self.db_floor,
-            sample_rate: self.sample_rate,
             window,
+            mag_scale,
             tmp: vec![Complex32::new(0.0, 0.0); self.fft_size],
             fft,
             overlap_buf: Vec::new(),
@@ -87,31 +90,31 @@ impl Spectrogram {
         while self.overlap_buf.len() >= self.frame_len {
             let frame = &self.overlap_buf[..self.frame_len];
 
-            // Zero-pad to fft_size
-            for i in 0..self.fft_size {
-                if i < self.frame_len {
-                    let x = frame[i] * self.window[i];
-                    self.tmp[i].re = x;
-                    self.tmp[i].im = 0.0;
-                } else {
-                    self.tmp[i].re = 0.0;
-                    self.tmp[i].im = 0.0;
-                }
+            // Windowed frame, zero-padded to fft_size
+            for (t, (&x, &w)) in self.tmp.iter_mut().zip(frame.iter().zip(self.window.iter())) {
+                t.re = x * w;
+                t.im = 0.0;
+            }
+            for t in self.tmp.iter_mut().skip(self.frame_len) {
+                t.re = 0.0;
+                t.im = 0.0;
             }
             self.fft.process(&mut self.tmp);
 
             // First N/2 bins to dB (magnitude or power)
             let n_bins = self.fft_size / 2;
             let mut row = vec![0.0f32; n_bins];
-            for i in 0..n_bins {
-                let c = self.tmp[i];
+            for (i, (v, c)) in row.iter_mut().zip(self.tmp.iter().take(n_bins)).enumerate() {
+                // DC has no two-sided split, so the sine calibration factor
+                // (2/sum(w)) would read it +6 dB high; use 1/sum(w) there.
+                let scale = if i == 0 { self.mag_scale * 0.5 } else { self.mag_scale };
                 let re2 = c.re * c.re; let im2 = c.im * c.im;
                 if self.alpha == 2 {
-                    let p = (re2 + im2).max(1e-24);
-                    row[i] = 10.0 * p.log10();
+                    let p = ((re2 + im2) * scale * scale).max(1e-24);
+                    *v = 10.0 * p.log10();
                 } else {
-                    let m = (re2 + im2).sqrt().max(1e-12);
-                    row[i] = 20.0 * m.log10();
+                    let m = ((re2 + im2).sqrt() * scale).max(1e-12);
+                    *v = 20.0 * m.log10();
                 }
             }
             if self.normalize {
@@ -179,7 +182,6 @@ mod tests {
 
         let mut spec = SpectrogramBuilder::new(n, n, n)
             .window(WindowType::Hann)
-            .sample_rate(fs)
             .alpha(1)
             .build();
 
@@ -190,6 +192,31 @@ mod tests {
         assert_eq!(row.len(), n / 2);
         let max_idx = row.iter().enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).map(|(i, _)| i).unwrap();
         assert!(max_idx >= k.saturating_sub(1) && max_idx <= k + 1, "peak {} not near {}", max_idx, k);
+    }
+
+    #[test]
+    fn full_scale_dc_reads_zero_dbfs() {
+        let n = 1024usize;
+        let mut spec = SpectrogramBuilder::new(n, n, n).window(WindowType::Hann).alpha(1).build();
+        let x = vec![1.0f32; n];
+        let rows = spec.process_samples(&x);
+        let dc = rows[0][0];
+        assert!(dc.abs() < 0.5, "full-scale DC read {dc:.2} dB, expected ~0 dBFS");
+    }
+
+    #[test]
+    fn full_scale_sine_reads_zero_dbfs() {
+        // Calibration must hold across different FFT sizes and windows
+        for &(n, w) in &[(1024usize, WindowType::Hann), (2048, WindowType::Hamming), (4096, WindowType::Blackman)] {
+            let fs = 48_000u32;
+            let k = n / 8; // bin-centered frequency, away from DC/Nyquist
+            let f0 = (fs as f32) * (k as f32) / (n as f32);
+            let mut spec = SpectrogramBuilder::new(n, n, n).window(w).alpha(1).build();
+            let x: Vec<f32> = (0..n).map(|i| (2.0 * std::f32::consts::PI * f0 * (i as f32) / (fs as f32)).sin()).collect();
+            let rows = spec.process_samples(&x);
+            let peak = rows[0].iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+            assert!(peak.abs() < 0.5, "N={n}: full-scale sine peak {peak:.2} dB, expected ~0 dBFS");
+        }
     }
 
     #[test]

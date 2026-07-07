@@ -7,9 +7,110 @@ pub enum AudioInputKind { Mic { device: Option<String> }, Wav(PathBuf) }
 
 pub fn run_input_pipeline<F: FnMut(&[f32]) + Send + 'static>(kind: AudioInputKind, target_sr: u32, realtime: bool, on_block: F) -> Result<()> {
     match kind {
-        AudioInputKind::Wav(path) => run_wav(path, target_sr, realtime, on_block),
+        AudioInputKind::Wav(path) => {
+            let is_wav = path
+                .extension()
+                .map(|e| e.to_string_lossy().eq_ignore_ascii_case("wav"))
+                .unwrap_or(false);
+            if is_wav {
+                run_wav(path, target_sr, realtime, on_block)
+            } else {
+                run_symphonia(path, target_sr, realtime, on_block)
+            }
+        }
         AudioInputKind::Mic { device } => run_mic(target_sr, device, on_block),
     }
+}
+
+/// Decode any symphonia-supported container/codec (mp3, flac, ogg/vorbis,
+/// m4a/aac, ...) streaming: downmix to mono, resample to target_sr, emit blocks.
+fn run_symphonia<F: FnMut(&[f32]) + Send + 'static>(path: PathBuf, target_sr: u32, realtime: bool, mut on_block: F) -> Result<()> {
+    use symphonia::core::audio::SampleBuffer;
+    use symphonia::core::codecs::{DecoderOptions, CODEC_TYPE_NULL};
+    use symphonia::core::errors::Error as SymError;
+    use symphonia::core::formats::FormatOptions;
+    use symphonia::core::io::MediaSourceStream;
+    use symphonia::core::meta::MetadataOptions;
+    use symphonia::core::probe::Hint;
+
+    let file = std::fs::File::open(&path).with_context(|| format!("Opening {}", path.display()))?;
+    let mss = MediaSourceStream::new(Box::new(file), Default::default());
+    let mut hint = Hint::new();
+    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+        hint.with_extension(ext);
+    }
+    let probed = symphonia::default::get_probe()
+        .format(&hint, mss, &FormatOptions::default(), &MetadataOptions::default())
+        .with_context(|| format!("Probing {}", path.display()))?;
+    let mut format = probed.format;
+    let track = format
+        .tracks()
+        .iter()
+        .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
+        .ok_or_else(|| anyhow!("No decodable audio track in {}", path.display()))?;
+    let track_id = track.id;
+    let mut decoder = symphonia::default::get_codecs()
+        .make(&track.codec_params, &DecoderOptions::default())
+        .with_context(|| "Creating decoder")?;
+
+    let mut sample_buf: Option<SampleBuffer<f32>> = None;
+    let mut src_buf: Vec<f32> = Vec::with_capacity(8192);
+    let mut out_buf: Vec<f32> = Vec::with_capacity(8192);
+    let mut src_pos = 0.0f32;
+    let block = 1024usize;
+    let start = std::time::Instant::now();
+    let mut emitted_samples: usize = 0;
+
+    loop {
+        let packet = match format.next_packet() {
+            Ok(p) => p,
+            Err(SymError::IoError(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
+            Err(SymError::ResetRequired) => break,
+            Err(e) => return Err(anyhow!("Demux error: {e}")),
+        };
+        if packet.track_id() != track_id {
+            continue;
+        }
+        let decoded = match decoder.decode(&packet) {
+            Ok(d) => d,
+            Err(SymError::DecodeError(_)) => continue, // skip corrupt packets
+            Err(e) => return Err(anyhow!("Decode error: {e}")),
+        };
+        let spec = *decoded.spec();
+        let channels = spec.channels.count().max(1);
+        let src_sr = spec.rate.max(1);
+        let ratio = (target_sr as f32) / (src_sr as f32);
+        let buf = sample_buf.get_or_insert_with(|| {
+            SampleBuffer::<f32>::new(decoded.capacity() as u64, spec)
+        });
+        if buf.capacity() < decoded.capacity() * channels {
+            *buf = SampleBuffer::<f32>::new(decoded.capacity() as u64, spec);
+        }
+        buf.copy_interleaved_ref(decoded);
+        for frame in buf.samples().chunks_exact(channels) {
+            let mono: f32 = frame.iter().sum::<f32>() / (channels as f32);
+            src_buf.push(mono);
+        }
+        resample_drain(ratio, &mut src_buf, &mut src_pos, &mut out_buf);
+        while out_buf.len() >= block {
+            let chunk = &out_buf[..block];
+            on_block(chunk);
+            if realtime {
+                throttle_realtime(chunk.len(), target_sr, start, &mut emitted_samples);
+            }
+            out_buf.drain(0..block);
+        }
+    }
+    // Flush remaining
+    while !out_buf.is_empty() {
+        let n = out_buf.len().min(block);
+        on_block(&out_buf[..n]);
+        if realtime {
+            throttle_realtime(n, target_sr, start, &mut emitted_samples);
+        }
+        out_buf.drain(0..n);
+    }
+    Ok(())
 }
 
 fn run_wav<F: FnMut(&[f32]) + Send + 'static>(path: PathBuf, target_sr: u32, realtime: bool, mut on_block: F) -> Result<()> {
@@ -247,7 +348,7 @@ fn run_mic<F: FnMut(&[f32]) + Send + 'static>(target_sr: u32, device_name: Optio
             }
             if !out_buf.is_empty() {
                 // Push remaining samples to keep UI responsive at startup
-                let chunk: Vec<f32> = out_buf.drain(..).collect();
+                let chunk: Vec<f32> = std::mem::take(&mut out_buf);
                 on_block(&chunk);
             }
         }

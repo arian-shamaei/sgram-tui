@@ -1,11 +1,11 @@
 [package]
 name = "sgram-tui"
-version = "0.2.1"
+version = "0.4.0"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/arian-shamaei/sgram-tui"
 homepage = "https://github.com/arian-shamaei/sgram-tui"
-description = "Fast terminal spectrogram viewer with mic/WAV input, style-aware export, and tunable DSP."
+description = "Terminal spectrogram analyzer: live mic or audio files (wav/mp3/flac/ogg), calibrated dBFS, measurement readouts, and labeled PNG figure export."
 readme = "README.md"
 keywords = ["audio", "spectrogram", "tui", "fft", "terminal"]
 categories = ["command-line-utilities", "multimedia::audio", "visualization"]
@@ -23,6 +23,7 @@ crossterm = "0.27"
 ratatui = "0.26"
 rustfft = "6.2"
 hound = "3.5"
+symphonia = { version = "0.5", default-features = false, features = ["mp3", "flac", "vorbis", "ogg", "isomp4", "aac", "pcm", "wav"] }
 image = { version = "0.24", default-features = false, features = ["png"] }
 csv = "1.3"
 serde = { version = "1", features = ["derive"] }
