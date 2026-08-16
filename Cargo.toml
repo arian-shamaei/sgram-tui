@@ -10,6 +10,8 @@ readme = "README.md"
 keywords = ["audio", "spectrogram", "tui", "fft", "terminal"]
 categories = ["command-line-utilities", "multimedia::audio", "visualization"]
 documentation = "https://github.com/arian-shamaei/sgram-tui"
+# keep the crate small: README assets (gif/wav/png) don't belong in the package
+include = ["src/**", "Cargo.toml", "README.md", "LICENSE", "CHANGELOG.md"]
 
 [features]
 default = ["mic"]
