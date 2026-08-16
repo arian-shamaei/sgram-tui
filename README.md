@@ -1,142 +1,117 @@
-[Sgram TUI](https://s2.smu.edu/~ashamaei/projects/sgram-tui.html)
-=========
+# sgram-tui &nbsp;·&nbsp; `sgram-tui`
 
-Terminal spectrogram viewer with mic/WAV input, style-aware PNG export, and tunable DSP.
+**A calibrated spectrogram analyzer that lives where your audio work does: the terminal.**
 
-[![Scope TUI Demo](https://img.youtube.com/vi/AtW3dyPjL08/0.jpg)](https://www.youtube.com/watch?v=AtW3dyPjL08 "Scope TUI Demo")
+![sgram-tui live-rendering the WAV that spells its own name](docs/assets/hero.gif)
 
+<sub>↑ the TUI, live: a horizontal sweep writing the name of the tool — because the audio itself spells it (read on).</sub>
 
+> **The hero image is audio.** [`scripts/spell.py`](scripts/spell.py) paints text into the
+> time–frequency plane — each glyph column a slice of time, each row a sine partial — and
+> `sgram-tui render` exports the labeled figure below. The image is the WAV; the WAV is in
+> [`docs/assets/`](docs/assets/); the whole loop is two commands you can run yourself.
 
+![the exported figure: SGRAM-TUI spelled in its own spectrogram](docs/assets/hero-spell.png)
 
-Install
--------
-- From source
-  - `cargo build --release && ./target/release/sgram-tui --help`
-  - Additional if running on Linux: `sudo apt-get install -y pkg-config libasound2-dev`
+<sub>↑ `sgram-tui render docs/assets/sgram-spell.wav --palette magma --fft 4096 --zoom 10.5 --detailed` — a real export, axes and colorbar included.</sub>
 
-Why?
---------
-- GUIs provide a visually more accurate image, so why use a TUI?
-- A lot of my audio workflows are on the terminal. I wanted a way to access a spectogram without switching from my terminal to a GUI.
-- scope-tui does a good job displaying X and XY graphs, sgram-tui intends to extend this functionality by adding a specogram.
-- This is the equivalent of the $50 oscilloscope: it's a fun toy that gives you the ability to see a spectogram inside of a terminal... neat!
+[![Crates.io](https://img.shields.io/crates/v/sgram-tui.svg)](https://crates.io/crates/sgram-tui)
+&nbsp;·&nbsp; [![Crates.io downloads](https://img.shields.io/crates/d/sgram-tui.svg)](https://crates.io/crates/sgram-tui)
+&nbsp;·&nbsp; [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+&nbsp;·&nbsp; Rust + ratatui · live mic or wav/mp3/flac/ogg/m4a · headless export mode
 
-What's with the name?
---------
-- it's a spectogram terminal user interface... I'm not sure if it gets simpler than that.
-
-Features
---------
-- Live spectrogram from `mic`, or from WAV/MP3/FLAC/Ogg/M4A files
-- Tunable analysis: window length (L), hop (H), FFT size (N), sample rate, window function (Hann/Hamming/Blackman)
-- Calibrated dBFS: window-gain-corrected so a full-scale sine reads ~0 dB at any FFT/window size
-- Mouse hover readout: time / frequency / dB under the cursor in every view
-- Absolute dB with floor/ceiling; fast floor control
-- Zoom; frequency scales: linear, log, mel
-- Styles: horizontal (time→x, freq→y), waterfall (time→y, freq→x), and spectrum (instantaneous bar graph); overview + fullscreen
-- Bin modes: all bins, or peaks-only (local spectral maxima)
-- True colormaps: Viridis, Inferno, Magma, Plasma, Jet (reference anchor colors), plus Grayscale, Heat, PurpleFire
-- Max-pooled rendering: narrowband peaks are never lost, no matter how many bins share a cell
-- Quadrant sub-pixel renderer (default): 2x2 pixels per terminal cell for 4x the display density
-- Fast rendering; real-time sync option for files
-- Exports: labeled PNG figures (axes, tick marks, dB colorbar, metadata title) and full-resolution CSV; default dir: `saved/`
-- Headless mode: `sgram-tui render FILE` writes the figure + CSV without opening the TUI
-
-Build
------
-- Requires Rust 1.70+ (edition 2021)
-- Default build includes microphone support via `cpal`:
-  - `cargo build --release`
-- If you want to skip microphone feature: `cargo build --no-default-features`
-
-Quick Start
------------
-- Live mic (macOS BlackHole example):
-  - `./target/release/sgram-tui mic --device "BlackHole 2ch" --fps 15 --pre-emphasis 0.97 --normalize`
-- WAV file (realtime): `./target/release/sgram-tui wav ./path.wav --realtime --pre-emphasis 0.97 --normalize`
-- Dense view: add `--resolution high` (and optionally `--render half`)
-- Save snapshots: press `s` (PNG) or `w` (CSV); `S`/`W` prompts for a path
-
-Run
 ---
-General usage
-- `sgram-tui [mic|wav|render|FILE] [FILE] [flags]`
-- Examples:
-  - `sgram-tui wav path/to/audio.wav --fft 2048 --hop 512 --floor -90 --style waterfall --palette purplefire`
-  - `sgram-tui mic --fft 1024 --hop 256 --device "Mic Name"`
-  - `sgram-tui path/to/audio.mp3 --style horizontal` (mp3/flac/ogg/m4a work anywhere a file path does)
-  - `sgram-tui render path/to/audio.flac --png-path fig.png --csv-path data.csv --freq-scale log` (headless figure export)
-  - Add `--resolution high` for a denser view; use `--render half` for higher time resolution in waterfall mode
 
-Controls
---------
-- `q`/`Esc`: Quit
-- `p`: Pause/resume
-- `a`: Cycle style (waterfall → spectrum → horizontal)
-- `b`: Toggle bin mode (all / peaks-only)
-- Mouse hover: live time/frequency/dB readout at the cursor
-- `+`/`-`: Zoom frequency range
-- `[[/]]`: Adjust dB floor down/up
-- `c`/`C`: Next/previous palette
-- `f`: Fullscreen toggle
-- `o`: Overview (fit entire history vertically into pane)
-- `d`: Details (metadata + throughput; frequency ticks only)
-- `s`/`w`: Quick save PNG/CSV (to `saved/` by default)
-- `S`/`W`: Prompt for PNG/CSV path and save
-- `r`: Reset (clear spectrogram history)
-- `h`/`F1`: Help overlay (usage + keys)
+## Why
 
-Details view
-------------
-Shows metadata and live processing throughput (rows/sec and real-time factor). Includes:
-- Source, fs, L/H/N, bin spacing (df)
-- dB floor/ceiling, zoom, scale, renderer
-- Throughput (rows/sec) and RTF (~1.0 equals real-time)
-- Total processed time (H×rows / fs)
-- dB colorbar legend on the right edge (read on-screen colors back as absolute dB)
+A GUI spectrogram means leaving the terminal your whole audio workflow lives in.
+`sgram-tui` is the $50-oscilloscope answer: point it at a mic or a file and get a
+**calibrated** dBFS spectrogram (window-gain-corrected — a full-scale sine reads ~0 dB
+at any FFT/window size) rendered at 2×2 sub-pixels per character cell, with a mouse
+hover readout of time / frequency / dB under the cursor. Not a toy palette: Viridis,
+Inferno, Magma, Plasma with reference anchor colors, and max-pooled rendering so a
+narrowband peak is never lost no matter how many bins share a cell.
 
+## The instrument view
 
-Configuration
--------------
-- Default config path: `${CONFIG_DIR}/io.github/arian-shamaei/sgram-tui/config.toml`
-- Example `config.toml`:
+![the detailed view: axes, metadata, throughput, keybindings](docs/assets/detailed.png)
 
-  detailed = true
-  fullscreen = false
-  device = "USB Audio"   # substring match for mic device
-  png_path = "./out.png" # default for quick save
-  csv_path = "./out.csv"
+<sub>↑ `--detailed`: source metadata, fs / L/H/N / bin spacing, live throughput (rows/sec, real-time factor), dB colorbar, and every keybinding one row away.</sub>
 
-Troubleshooting
----------------
-- No input device (mic): rebuild without `mic` feature: `cargo run --no-default-features -- path.wav`
-- Small/empty display: ensure FFT/hop are reasonable and terminal window is large enough.
-- High CPU: reduce FPS, increase hop, or lower FFT size.
+- **Inputs**: live mic (`cpal`, device by substring), or WAV/MP3/FLAC/Ogg/M4A files with `--realtime` playback sync
+- **Analysis you control**: FFT size, window length + function (Hann/Hamming/Blackman), hop, sample rate, magnitude/power dB, pre-emphasis
+- **Three styles**: horizontal sweep (time→x), waterfall (time→y), instantaneous spectrum bars — cycle with `a`
+- **Display science**: linear / log / mel frequency scales, zoom, dB floor/ceiling, peaks-only bin mode, overview + fullscreen
+- **Measurement**: mouse hover reads time / frequency / dB in every view
 
+## Figures out, data out
 
+Press `s` and the current view becomes a **labeled PNG figure** — axes, tick marks, dB
+colorbar, metadata title — ready for a lab notebook or a paper appendix. `w` writes
+full-resolution CSV. And all of it works headless:
 
-Flags
------
-- `--fft <N>`: FFT size (bin spacing fs/N)
-- `--win <L>`: Window length; zero-pads to FFT if L < N
-- `--window <fn>`: Window function: hann | hamming | blackman
-- `--hop <H>`: Hop size
-- `--sample-rate <fs>`: Target sample rate for processing
-- `--alpha <1|2>`: 1=magnitude dB, 2=power dB
-- `--floor <dB>` / `--ceil <dB>`: dB range for display
-- `--zoom <z>`: Zoom into low frequencies
-- `--palette <name>`: grayscale, heat, jet, viridis, inferno, magma, plasma, purplefire
-- `--style <mode>`: horizontal | waterfall | spectrum
-- `--bins <mode>`: all | peaks (draw only local spectral maxima)
-- `--render <mode>`: quad (2x2 sub-pixels per cell, default) | half (1x2) | cell (1x1)
-- `--resolution <preset>`: low | medium | high | ultra
-- `--freq-scale <scale>`: linear | log | mel (display warping)
-- `--png-path <PATH>` / `--csv-path <PATH>`: quick-save destinations
-- `--device <substring>`: mic device selection by substring
-- `--overview`: start with overview mode enabled (fit history into pane)
-- `--realtime`: throttle WAV to approximately real time
+```sh
+sgram-tui render recording.flac --png-path fig.png --csv-path data.csv --freq-scale log
+```
 
+## Install
 
-License
--------
-MIT 
+```sh
+cargo install sgram-tui
+```
+
+or from a clone:
+
+```sh
+cargo build --release        # add --no-default-features to skip mic support
+./target/release/sgram-tui --help
+```
+
+Linux mic support needs `pkg-config libasound2-dev`. Uninstall: `cargo uninstall sgram-tui`.
+
+## Quick start
+
+```sh
+sgram-tui song.mp3                              # any supported file, horizontal sweep
+sgram-tui wav take.wav --realtime --normalize   # file at real-time speed
+sgram-tui mic --device "BlackHole" --fps 15     # live input, device by substring
+sgram-tui render take.wav --png-path fig.png    # no TUI, just the figure
+```
+
+## Controls
+
+| key | action | key | action |
+|-----|--------|-----|--------|
+| `a` | cycle style | `c`/`C` | next/prev palette |
+| `+`/`-` | zoom frequency range | `[`/`]` | dB floor down/up |
+| `b` | all bins ⇄ peaks only | `o` | overview (fit all history) |
+| `d` | details overlay | `f` | fullscreen |
+| `s`/`w` | save PNG / CSV | `S`/`W` | save with path prompt |
+| `p` | pause | `r` | reset history |
+| `h`/`F1` | help | `q` | quit |
+
+Mouse hover reads time / frequency / dB anywhere.
+
+<details>
+<summary><b>All flags</b></summary>
+
+- `--fft <N>` FFT size (bin spacing fs/N) · `--win <L>` window length (zero-pads to N) · `--window hann|hamming|blackman` · `--hop <H>`
+- `--sample-rate <fs>` · `--alpha 1|2` (magnitude/power dB) · `--pre-emphasis <0..1>`
+- `--floor <dB>` / `--ceil <dB>` · `--zoom <z>` · `--freq-scale linear|log|mel`
+- `--style horizontal|waterfall|spectrum` · `--palette <name>` · `--bins all|peaks`
+- `--render quad|half|cell` (sub-pixel density) · `--resolution low|medium|high|ultra`
+- `--png-path <p>` / `--csv-path <p>` · `--device <substring>` · `--overview` · `--realtime` · `--normalize` · `--clamp-floor` · `--no-mic`
+
+Config file: `${CONFIG_DIR}/io.github/arian-shamaei/sgram-tui/config.toml` (`detailed`,
+`fullscreen`, `device`, `png_path`, `csv_path`).
+
+</details>
+
+## Troubleshooting
+
+- No mic device: rebuild with `--no-default-features` and use file input.
+- High CPU: reduce `--fps`, increase `--hop`, or lower `--fft`.
+
+## License
+
+MIT
